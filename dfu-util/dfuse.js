@@ -23,7 +23,7 @@ var dfuse = {};
 
   dfuse.parseMemoryDescriptor = function (desc) {
     const nameEndIndex = desc.indexOf('/')
-    if (!desc.startsWith('@') || nameEndIndex == -1) {
+    if (!desc.startsWith('@') || nameEndIndex === -1) {
       throw `Not a DfuSe memory descriptor: "${desc}"`
     }
 
@@ -53,9 +53,9 @@ var dfuse = {};
         segment.start = startAddress
         segment.sectorSize = sectorSize
         segment.end = startAddress + sectorSize * sectorCount
-        segment.readable = (properties & 0x1) != 0
-        segment.erasable = (properties & 0x2) != 0
-        segment.writable = (properties & 0x4) != 0
+        segment.readable = (properties & 0x1) !== 0
+        segment.erasable = (properties & 0x2) !== 0
+        segment.writable = (properties & 0x4) !== 0
         segments.push(segment)
 
         startAddress += sectorSize * sectorCount
@@ -80,9 +80,9 @@ var dfuse = {};
     let payload = new ArrayBuffer(len + 1)
     let view = new DataView(payload)
     view.setUint8(0, command)
-    if (len == 1) {
+    if (len === 1) {
       view.setUint8(1, param)
-    } else if (len == 4) {
+    } else if (len === 4) {
       view.setUint32(1, param, true)
     } else {
       throw "Don't know how to handle data of len " + len
@@ -94,8 +94,8 @@ var dfuse = {};
       throw 'Error during special DfuSe command ' + commandNames[command] + ':' + error
     }
 
-    let status = await this.poll_until(state => (state != dfu.dfuDNBUSY))
-    if (status.status != dfu.STATUS_OK) {
+    let status = await this.poll_until(state => (state !== dfu.dfuDNBUSY))
+    if (status.status !== dfu.STATUS_OK) {
       throw 'Special DfuSe command ' + commandName + ' failed'
     }
   }
@@ -168,7 +168,7 @@ var dfuse = {};
         } else {
           return 0
         }
-      } else if (segment.start == startAddr + numBytes) {
+      } else if (segment.start === startAddr + numBytes) {
         // Include a contiguous segment
         if (segment.readable) {
           numBytes += (segment.end - segment.start)
@@ -213,15 +213,15 @@ var dfuse = {};
     }
   }
 
-  dfuse.Device.prototype.do_download = async function (xfer_size, data, manifestationTolerant) {
+  dfuse.Device.prototype.do_download = async function (xferSize, data, manifestationTolerant) {
     if (!this.memoryInfo || !this.memoryInfo.segments) {
       throw 'No memory map available'
     }
 
     this.logInfo('Erasing DFU device memory')
 
-    let bytes_sent = 0
-    let expected_size = data.byteLength
+    let bytesSent = 0
+    let expectedSize = data.byteLength
 
     let startAddress = this.startAddress
     if (isNaN(startAddress)) {
@@ -230,38 +230,38 @@ var dfuse = {};
     } else if (this.getSegment(startAddress) === null) {
       this.logError(`Start address 0x${startAddress.toString(16)} outside of memory map bounds`)
     }
-    await this.erase(startAddress, expected_size)
+    await this.erase(startAddress, expectedSize)
 
     this.logInfo('Copying data from browser to DFU device')
 
     let address = startAddress
-    while (bytes_sent < expected_size) {
-      const bytes_left = expected_size - bytes_sent
-      const chunk_size = Math.min(bytes_left, xfer_size)
+    while (bytesSent < expectedSize) {
+      const bytesLeft = expectedSize - bytesSent
+      const chunkSize = Math.min(bytesLeft, xferSize)
 
-      let bytes_written = 0
-      let dfu_status
+      let bytesWritten = 0
+      let dfuStatus
       try {
         await this.dfuseCommand(dfuse.SET_ADDRESS, address, 4)
         this.logDebug(`Set address to 0x${address.toString(16)}`)
-        bytes_written = await this.download(data.slice(bytes_sent, bytes_sent + chunk_size), 2)
-        this.logDebug('Sent ' + bytes_written + ' bytes')
-        dfu_status = await this.poll_until_idle(dfu.dfuDNLOAD_IDLE)
-        address += chunk_size
+        bytesWritten = await this.download(data.slice(bytesSent, bytesSent + chunkSize), 2)
+        this.logDebug('Sent ' + bytesWritten + ' bytes')
+        dfuStatus = await this.poll_until_idle(dfu.dfuDNLOAD_IDLE)
+        address += chunkSize
       } catch (error) {
         throw 'Error during DfuSe download: ' + error
       }
 
-      if (dfu_status.status != dfu.STATUS_OK) {
-        throw `DFU DOWNLOAD failed state=${dfu_status.state}, status=${dfu_status.status}`
+      if (dfuStatus.status !== dfu.STATUS_OK) {
+        throw `DFU DOWNLOAD failed state=${dfuStatus.state}, status=${dfuStatus.status}`
       }
 
-      this.logDebug('Wrote ' + bytes_written + ' bytes')
-      bytes_sent += bytes_written
+      this.logDebug('Wrote ' + bytesWritten + ' bytes')
+      bytesSent += bytesWritten
 
-      this.logProgress(bytes_sent, expected_size)
+      this.logProgress(bytesSent, expectedSize)
     }
-    this.logInfo(`Wrote ${bytes_sent} bytes`)
+    this.logInfo(`Wrote ${bytesSent} bytes`)
 
     this.logInfo('Manifesting new firmware')
     try {
@@ -272,13 +272,13 @@ var dfuse = {};
     }
 
     try {
-      await this.poll_until(state => (state == dfu.dfuMANIFEST))
+      await this.poll_until(state => (state === dfu.dfuMANIFEST))
     } catch (error) {
       this.logError(error)
     }
   }
 
-  dfuse.Device.prototype.do_upload = async function (xfer_size, max_size) {
+  dfuse.Device.prototype.do_upload = async function (xferSize, maxSize) {
     let startAddress = this.startAddress
     if (isNaN(startAddress)) {
       startAddress = this.memoryInfo.segments[0].start
@@ -287,9 +287,9 @@ var dfuse = {};
       this.logWarning(`Start address 0x${startAddress.toString(16)} outside of memory map bounds`)
     }
 
-    this.logInfo(`Reading up to 0x${max_size.toString(16)} bytes starting at 0x${startAddress.toString(16)}`)
+    this.logInfo(`Reading up to 0x${maxSize.toString(16)} bytes starting at 0x${startAddress.toString(16)}`)
     let state = await this.getState()
-    if (state != dfu.dfuIDLE) {
+    if (state !== dfu.dfuIDLE) {
       await this.abortToIdle()
     }
     await this.dfuseCommand(dfuse.SET_ADDRESS, startAddress, 4)
@@ -297,6 +297,6 @@ var dfuse = {};
 
     // DfuSe encodes the read address based on the transfer size,
     // the block number - 2, and the SET_ADDRESS pointer.
-    return await dfu.Device.prototype.do_upload.call(this, xfer_size, max_size, 2)
+    return await dfu.Device.prototype.do_upload.call(this, xferSize, maxSize, 2)
   }
 })()

@@ -36,9 +36,9 @@ var dfu = {};
     for (let conf of device.configurations) {
       for (let intf of conf.interfaces) {
         for (let alt of intf.alternates) {
-          if (alt.interfaceClass == 0xFE &&
-                        alt.interfaceSubclass == 0x01 &&
-                        (alt.interfaceProtocol == 0x01 || alt.interfaceProtocol == 0x02)) {
+          if (alt.interfaceClass === 0xFE &&
+                        alt.interfaceSubclass === 0x01 &&
+                        (alt.interfaceProtocol === 0x01 || alt.interfaceProtocol === 0x02)) {
             let settings = {
               'configuration': conf,
               'interface': intf,
@@ -97,7 +97,7 @@ var dfu = {};
     await this.device_.open()
     const confValue = this.settings.configuration.configurationValue
     if (this.device_.configuration === null ||
-            this.device_.configuration.configurationValue != confValue) {
+            this.device_.configuration.configurationValue !== confValue) {
       await this.device_.selectConfiguration(confValue)
     }
 
@@ -109,7 +109,7 @@ var dfu = {};
     const altSetting = this.settings.alternate.alternateSetting
     let intf = this.device_.configuration.interfaces[intfNumber]
     if (intf.alternate === null ||
-            intf.alternate.alternateSetting != altSetting) {
+            intf.alternate.alternateSetting !== altSetting) {
       await this.device_.selectAlternateInterface(intfNumber, altSetting)
     }
   }
@@ -135,7 +135,7 @@ var dfu = {};
       'index': 0
     }, 18).then(
       result => {
-        if (result.status == 'ok') {
+        if (result.status === 'ok') {
           return Promise.resolve(result.data)
         } else {
           return Promise.reject(result.status)
@@ -153,7 +153,7 @@ var dfu = {};
     const DT_STRING = 0x03
     const wValue = (DT_STRING << 8) | index
 
-    const request_setup = {
+    const requestSetup = {
       'requestType': 'standard',
       'recipient': 'device',
       'request': GET_DESCRIPTOR,
@@ -162,24 +162,24 @@ var dfu = {};
     }
 
     // Read enough for bLength
-    var result = await this.device_.controlTransferIn(request_setup, 1)
+    var result = await this.device_.controlTransferIn(requestSetup, 1)
 
-    if (result.status == 'ok') {
+    if (result.status === 'ok') {
       // Retrieve the full descriptor
       const bLength = result.data.getUint8(0)
-      result = await this.device_.controlTransferIn(request_setup, bLength)
-      if (result.status == 'ok') {
+      result = await this.device_.controlTransferIn(requestSetup, bLength)
+      if (result.status === 'ok') {
         const len = (bLength - 2) / 2
-        let u16_words = []
+        let u16Words = []
         for (let i = 0; i < len; i++) {
-          u16_words.push(result.data.getUint16(2 + i * 2, true))
+          u16Words.push(result.data.getUint16(2 + i * 2, true))
         }
-        if (langID == 0) {
+        if (langID === 0) {
           // Return the langID array
-          return u16_words
+          return u16Words
         } else {
           // Decode from UCS-2 into a string
-          return String.fromCharCode.apply(String, u16_words)
+          return String.fromCharCode.apply(String, u16Words)
         }
       }
     }
@@ -200,7 +200,7 @@ var dfu = {};
 
       // Retrieve string indices for interface names
       for (let desc of configDesc.descriptors) {
-        if (desc.bDescriptorType == DT_INTERFACE) {
+        if (desc.bDescriptorType === DT_INTERFACE) {
           if (!(desc.bInterfaceNumber in configs[configValue])) {
             configs[configValue][desc.bInterfaceNumber] = {}
           }
@@ -310,16 +310,16 @@ var dfu = {};
       let bLength = remainingData.getUint8(0)
       let bDescriptorType = remainingData.getUint8(1)
       let descData = new DataView(remainingData.buffer.slice(0, bLength))
-      if (bDescriptorType == DT_INTERFACE) {
+      if (bDescriptorType === DT_INTERFACE) {
         currIntf = dfu.parseInterfaceDescriptor(descData)
-        if (currIntf.bInterfaceClass == USB_CLASS_APP_SPECIFIC &&
-                    currIntf.bInterfaceSubClass == USB_SUBCLASS_DFU) {
+        if (currIntf.bInterfaceClass === USB_CLASS_APP_SPECIFIC &&
+                    currIntf.bInterfaceSubClass === USB_SUBCLASS_DFU) {
           inDfuIntf = true
         } else {
           inDfuIntf = false
         }
         descriptors.push(currIntf)
-      } else if (inDfuIntf && bDescriptorType == DT_DFU_FUNCTIONAL) {
+      } else if (inDfuIntf && bDescriptorType === DT_DFU_FUNCTIONAL) {
         let funcDesc = dfu.parseFunctionalDescriptor(descData)
         descriptors.push(funcDesc)
         currIntf.descriptors.push(funcDesc)
@@ -353,7 +353,7 @@ var dfu = {};
       'index': 0
     }, 4).then(
       result => {
-        if (result.status == 'ok') {
+        if (result.status === 'ok') {
           // Read out length of the configuration descriptor
           let wLength = result.data.getUint16(2, true)
           return this.device_.controlTransferIn({
@@ -369,7 +369,7 @@ var dfu = {};
       }
     ).then(
       result => {
-        if (result.status == 'ok') {
+        if (result.status === 'ok') {
           return Promise.resolve(result.data)
         } else {
           return Promise.reject(result.status)
@@ -387,7 +387,7 @@ var dfu = {};
       'index': this.intfNumber
     }, data).then(
       result => {
-        if (result.status == 'ok') {
+        if (result.status === 'ok') {
           return Promise.resolve(result.bytesWritten)
         } else {
           return Promise.reject(result.status)
@@ -408,7 +408,7 @@ var dfu = {};
       'index': this.intfNumber
     }, wLength).then(
       result => {
-        if (result.status == 'ok') {
+        if (result.status === 'ok') {
           return Promise.resolve(result.data)
         } else {
           return Promise.reject(result.status)
@@ -498,105 +498,105 @@ var dfu = {};
   dfu.Device.prototype.abortToIdle = async function () {
     await this.abort()
     let state = await this.getState()
-    if (state == dfu.dfuERROR) {
+    if (state === dfu.dfuERROR) {
       await this.clearStatus()
       state = await this.getState()
     }
-    if (state != dfu.dfuIDLE) {
+    if (state !== dfu.dfuIDLE) {
       throw 'Failed to return to idle state after abort: state ' + state.state
     }
   }
 
-  dfu.Device.prototype.do_upload = async function (xfer_size, max_size = Infinity, first_block = 0) {
-    let transaction = first_block
+  dfu.Device.prototype.do_upload = async function (xferSize, maxSize = Infinity, firstBlock = 0) {
+    let transaction = firstBlock
     let blocks = []
-    let bytes_read = 0
+    let bytesRead = 0
 
     this.logInfo('Copying data from DFU device to browser')
     // Initialize progress to 0
     this.logProgress(0)
 
     let result
-    let bytes_to_read
+    let bytesToRead
     do {
-      bytes_to_read = Math.min(xfer_size, max_size - bytes_read)
-      result = await this.upload(bytes_to_read, transaction++)
+      bytesToRead = Math.min(xferSize, maxSize - bytesRead)
+      result = await this.upload(bytesToRead, transaction++)
       this.logDebug('Read ' + result.byteLength + ' bytes')
       if (result.byteLength > 0) {
         blocks.push(result)
-        bytes_read += result.byteLength
+        bytesRead += result.byteLength
       }
-      if (Number.isFinite(max_size)) {
-        this.logProgress(bytes_read, max_size)
+      if (Number.isFinite(maxSize)) {
+        this.logProgress(bytesRead, maxSize)
       } else {
-        this.logProgress(bytes_read)
+        this.logProgress(bytesRead)
       }
-    } while ((bytes_read < max_size) && (result.byteLength == bytes_to_read))
+    } while ((bytesRead < maxSize) && (result.byteLength === bytesToRead))
 
-    if (bytes_read == max_size) {
+    if (bytesRead === maxSize) {
       await this.abortToIdle()
     }
 
-    this.logInfo(`Read ${bytes_read} bytes`)
+    this.logInfo(`Read ${bytesRead} bytes`)
 
     return new Blob(blocks, { type: 'application/octet-stream' })
   }
 
-  dfu.Device.prototype.poll_until = async function (state_predicate) {
-    let dfu_status = await this.getStatus()
+  dfu.Device.prototype.poll_until = async function (statePredicate) {
+    let dfuStatus = await this.getStatus()
 
     let device = this
-    function async_sleep (duration_ms) {
+    function asyncSleep (durationMs) {
       return new Promise(function (resolve, reject) {
-        device.logDebug('Sleeping for ' + duration_ms + 'ms')
-        setTimeout(resolve, duration_ms)
+        device.logDebug('Sleeping for ' + durationMs + 'ms')
+        setTimeout(resolve, durationMs)
       })
     }
 
-    while (!state_predicate(dfu_status.state) && dfu_status.state != dfu.dfuERROR) {
-      await async_sleep(dfu_status.pollTimeout)
-      dfu_status = await this.getStatus()
+    while (!statePredicate(dfuStatus.state) && dfuStatus.state !== dfu.dfuERROR) {
+      await asyncSleep(dfuStatus.pollTimeout)
+      dfuStatus = await this.getStatus()
     }
 
-    return dfu_status
+    return dfuStatus
   }
 
-  dfu.Device.prototype.poll_until_idle = function (idle_state) {
-    return this.poll_until(state => (state == idle_state))
+  dfu.Device.prototype.poll_until_idle = function (idleState) {
+    return this.poll_until(state => (state === idleState))
   }
 
-  dfu.Device.prototype.do_download = async function (xfer_size, data, manifestationTolerant) {
-    let bytes_sent = 0
-    let expected_size = data.byteLength
+  dfu.Device.prototype.do_download = async function (xferSize, data, manifestationTolerant) {
+    let bytesSent = 0
+    let expectedSize = data.byteLength
     let transaction = 0
 
     this.logInfo('Copying data from browser to DFU device')
 
     // Initialize progress to 0
-    this.logProgress(bytes_sent, expected_size)
+    this.logProgress(bytesSent, expectedSize)
 
-    while (bytes_sent < expected_size) {
-      const bytes_left = expected_size - bytes_sent
-      const chunk_size = Math.min(bytes_left, xfer_size)
+    while (bytesSent < expectedSize) {
+      const bytesLeft = expectedSize - bytesSent
+      const chunkSize = Math.min(bytesLeft, xferSize)
 
-      let bytes_written = 0
-      let dfu_status
+      let bytesWritten = 0
+      let dfuStatus
       try {
-        bytes_written = await this.download(data.slice(bytes_sent, bytes_sent + chunk_size), transaction++)
-        this.logDebug('Sent ' + bytes_written + ' bytes')
-        dfu_status = await this.poll_until_idle(dfu.dfuDNLOAD_IDLE)
+        bytesWritten = await this.download(data.slice(bytesSent, bytesSent + chunkSize), transaction++)
+        this.logDebug('Sent ' + bytesWritten + ' bytes')
+        dfuStatus = await this.poll_until_idle(dfu.dfuDNLOAD_IDLE)
       } catch (error) {
         throw 'Error during DFU download: ' + error
       }
 
-      if (dfu_status.status != dfu.STATUS_OK) {
-        throw `DFU DOWNLOAD failed state=${dfu_status.state}, status=${dfu_status.status}`
+      if (dfuStatus.status !== dfu.STATUS_OK) {
+        throw `DFU DOWNLOAD failed state=${dfuStatus.state}, status=${dfuStatus.status}`
       }
 
-      this.logDebug('Wrote ' + bytes_written + ' bytes')
-      bytes_sent += bytes_written
+      this.logDebug('Wrote ' + bytesWritten + ' bytes')
+      bytesSent += bytesWritten
 
-      this.logProgress(bytes_sent, expected_size)
+      this.logProgress(bytesSent, expectedSize)
     }
 
     this.logDebug('Sending empty block')
@@ -606,14 +606,14 @@ var dfu = {};
       throw 'Error during final DFU download: ' + error
     }
 
-    this.logInfo('Wrote ' + bytes_sent + ' bytes')
+    this.logInfo('Wrote ' + bytesSent + ' bytes')
     this.logInfo('Manifesting new firmware')
 
     if (manifestationTolerant) {
       // Transition to MANIFEST_SYNC state
-      let dfu_status
+      let dfuStatus
       try {
-        dfu_status = await this.poll_until_idle(dfu.dfuIDLE)
+        dfuStatus = await this.poll_until_idle(dfu.dfuIDLE)
       } catch (error) {
         if (error.endsWith('ControlTransferIn failed: NotFoundError: Device unavailable.')) {
           this.logWarning('Unable to poll final manifestation status')
@@ -622,14 +622,14 @@ var dfu = {};
         }
       }
 
-      if (dfu_status.status != dfu.STATUS_OK) {
-        throw `DFU MANIFEST failed state=${dfu_status.state}, status=${dfu_status.status}`
+      if (dfuStatus.status !== dfu.STATUS_OK) {
+        throw `DFU MANIFEST failed state=${dfuStatus.state}, status=${dfuStatus.status}`
       }
     } else {
       // Try polling once to initiate manifestation
       try {
-        let final_status = await this.getStatus()
-        this.logDebug(`Final DFU status: state=${final_status.state}, status=${final_status.status}`)
+        let finalStatus = await this.getStatus()
+        this.logDebug(`Final DFU status: state=${finalStatus.state}, status=${finalStatus.status}`)
       } catch (error) {
         this.logDebug('Manifest GET_STATUS poll error: ' + error)
       }
@@ -638,8 +638,8 @@ var dfu = {};
     try {
       await this.device_.reset()
     } catch (error) {
-      if (error == 'NetworkError: Unable to reset the device.' ||
-                error == 'NotFoundError: Device unavailable.') {
+      if (error === 'NetworkError: Unable to reset the device.' ||
+                error === 'NotFoundError: Device unavailable.') {
         this.logDebug('Ignored reset error')
       } else {
         throw 'Error during reset for manifestation: ' + error

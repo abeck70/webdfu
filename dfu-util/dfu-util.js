@@ -39,9 +39,9 @@ var device = null;
     const name = device.device_.productName
 
     let mode = 'Unknown'
-    if (device.settings.alternate.interfaceProtocol == 0x01) {
+    if (device.settings.alternate.interfaceProtocol === 0x01) {
       mode = 'Runtime'
-    } else if (device.settings.alternate.interfaceProtocol == 0x02) {
+    } else if (device.settings.alternate.interfaceProtocol === 0x02) {
       mode = 'DFU'
     }
 
@@ -55,9 +55,9 @@ var device = null;
 
   function formatDFUInterfaceAlternate (settings) {
     let mode = 'Unknown'
-    if (settings.alternate.interfaceProtocol == 0x01) {
+    if (settings.alternate.interfaceProtocol === 0x01) {
       mode = 'Runtime'
-    } else if (settings.alternate.interfaceProtocol == 0x02) {
+    } else if (settings.alternate.interfaceProtocol === 0x02) {
       mode = 'DFU'
     }
 
@@ -90,9 +90,9 @@ var device = null;
   }
 
   function populateInterfaceList (form, device_, interfaces) {
-    let old_choices = Array.from(form.getElementsByTagName('div'))
-    for (let radio_div of old_choices) {
-      form.removeChild(radio_div)
+    let oldChoices = Array.from(form.getElementsByTagName('div'))
+    for (let radioDiv of oldChoices) {
+      form.removeChild(radioDiv)
     }
 
     let button = form.getElementsByTagName('button')[0]
@@ -125,9 +125,9 @@ var device = null;
         let configDesc = dfu.parseConfigurationDescriptor(data)
         let funcDesc = null
         let configValue = device.settings.configuration.configurationValue
-        if (configDesc.bConfigurationValue == configValue) {
+        if (configDesc.bConfigurationValue === configValue) {
           for (let desc of configDesc.descriptors) {
-            if (desc.bDescriptorType == 0x21 && desc.hasOwnProperty('bcdDFUVersion')) {
+            if (desc.bDescriptorType === 0x21 && desc.hasOwnProperty('bcdDFUVersion')) {
               funcDesc = desc
               break
             }
@@ -136,10 +136,10 @@ var device = null;
 
         if (funcDesc) {
           return {
-            WillDetach: ((funcDesc.bmAttributes & 0x08) != 0),
-            ManifestationTolerant: ((funcDesc.bmAttributes & 0x04) != 0),
-            CanUpload: ((funcDesc.bmAttributes & 0x02) != 0),
-            CanDnload: ((funcDesc.bmAttributes & 0x01) != 0),
+            WillDetach: ((funcDesc.bmAttributes & 0x08) !== 0),
+            ManifestationTolerant: ((funcDesc.bmAttributes & 0x04) !== 0),
+            CanUpload: ((funcDesc.bmAttributes & 0x02) !== 0),
+            CanDnload: ((funcDesc.bmAttributes & 0x01) !== 0),
             TransferSize: funcDesc.wTransferSize,
             DetachTimeOut: funcDesc.wDetachTimeOut,
             DFUVersion: funcDesc.bcdDFUVersion
@@ -202,7 +202,7 @@ var device = null;
   function logProgress (done, total) {
     if (logContext) {
       let progressBar
-      if (logContext.lastChild.tagName.toLowerCase() == 'progress') {
+      if (logContext.lastChild.tagName.toLowerCase() === 'progress') {
         progressBar = logContext.lastChild
       }
       if (!progressBar) {
@@ -329,7 +329,7 @@ var device = null;
           manifestationTolerant = desc.ManifestationTolerant
         }
 
-        if (device.settings.alternate.interfaceProtocol == 0x02) {
+        if (device.settings.alternate.interfaceProtocol === 0x02) {
           if (!desc.CanUpload) {
             uploadButton.disabled = true
             dfuseUploadSizeField.disabled = true
@@ -339,7 +339,7 @@ var device = null;
           }
         }
 
-        if (desc.DFUVersion == 0x011a && device.settings.alternate.interfaceProtocol == 0x02) {
+        if (desc.DFUVersion === 0x011a && device.settings.alternate.interfaceProtocol === 0x02) {
           device = new dfuse.Device(device.device_, device.settings)
           if (device.memoryInfo) {
             let totalSize = 0
@@ -393,7 +393,7 @@ var device = null;
       dfuDisplay.textContent = formatDFUSummary(device) + '\n' + memorySummary
 
       // Update buttons based on capabilities
-      if (device.settings.alternate.interfaceProtocol == 0x01) {
+      if (device.settings.alternate.interfaceProtocol === 0x01) {
         // Runtime
         detachButton.disabled = false
         uploadButton.disabled = true
@@ -432,31 +432,31 @@ var device = null;
 
     function autoConnect (vid, serial) {
       dfu.findAllDfuInterfaces().then(
-        async dfu_devices => {
-          let matching_devices = []
-          for (let dfu_device of dfu_devices) {
+        async dfuDevices => {
+          let matchingDevices = []
+          for (let dfuDevice of dfuDevices) {
             if (serial) {
-              if (dfu_device.device_.serialNumber == serial) {
-                matching_devices.push(dfu_device)
+              if (dfuDevice.device_.serialNumber === serial) {
+                matchingDevices.push(dfuDevice)
               }
-            } else if (dfu_device.device_.vendorId == vid) {
-              matching_devices.push(dfu_device)
+            } else if (dfuDevice.device_.vendorId === vid) {
+              matchingDevices.push(dfuDevice)
             }
           }
 
-          if (matching_devices.length == 0) {
+          if (matchingDevices.length === 0) {
             statusDisplay.textContent = 'No device found.'
           } else {
-            if (matching_devices.length == 1) {
+            if (matchingDevices.length === 1) {
               statusDisplay.textContent = 'Connecting...'
-              device = matching_devices[0]
+              device = matchingDevices[0]
               console.log(device)
               device = await connect(device)
             } else {
               statusDisplay.textContent = 'Multiple DFU interfaces found.'
             }
-            vidField.value = '0x' + hex4(matching_devices[0].device_.vendorId).toUpperCase()
-            vid = matching_devices[0].device_.vendorId
+            vidField.value = '0x' + hex4(matchingDevices[0].device_.vendorId).toUpperCase()
+            vid = matchingDevices[0].device_.vendorId
           }
         }
       )
@@ -502,10 +502,10 @@ var device = null;
         navigator.usb.requestDevice({ 'filters': filters }).then(
           async selectedDevice => {
             let interfaces = dfu.findDeviceDfuInterfaces(selectedDevice)
-            if (interfaces.length == 0) {
+            if (interfaces.length === 0) {
               console.log(selectedDevice)
               statusDisplay.textContent = 'The selected device does not have any USB DFU interfaces.'
-            } else if (interfaces.length == 1) {
+            } else if (interfaces.length === 1) {
               await fixInterfaceNames(selectedDevice, interfaces)
               device = await connect(new dfu.Device(selectedDevice, interfaces[0]))
             } else {
@@ -578,7 +578,7 @@ var device = null;
         clearLog(uploadLog)
         try {
           let status = await device.getStatus()
-          if (status.state == dfu.dfuERROR) {
+          if (status.state === dfu.dfuERROR) {
             await device.clearStatus()
           }
         } catch (error) {
@@ -628,7 +628,7 @@ var device = null;
         clearLog(downloadLog)
         try {
           let status = await device.getStatus()
-          if (status.state == dfu.dfuERROR) {
+          if (status.state === dfu.dfuERROR) {
             await device.clearStatus()
           }
         } catch (error) {
